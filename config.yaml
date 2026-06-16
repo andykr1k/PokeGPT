@@ -1,0 +1,16 @@
+app:
+  port: 8000
+  host: 0.0.0.0
+
+emulator:
+  capture_fps: 30
+  region:
+    left: 0
+    top: 0
+    width: 256
+    height: 384
+    
+agent:
+  model_name: "Qwen/Qwen3.5-9B"
+  max_tokens: 256
+  temperature: 0.7
