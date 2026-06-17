@@ -4,6 +4,8 @@ import time
 import numpy as np
 import cv2
 import threading
+import subprocess
+import re
 
 # We create a dummy emulator interface for now.
 # Real usage: locate the DeSmuME window, grab its screen area, and send key presses.
@@ -32,9 +34,45 @@ class EmulatorController:
             "height": config.get('emulator', {}).get('region', {}).get('height', 384)
         }
         self.lock = threading.Lock()
+        self.last_monitor_update = 0
+
+    def update_monitor_geometry(self):
+        now = time.time()
+        # Only update once every 2 seconds to avoid CPU overhead
+        if now - self.last_monitor_update < 2.0:
+            return
+
+        self.last_monitor_update = now
+        try:
+            wid_cmd = subprocess.run(["xdotool", "search", "--name", "DeSmuME"], capture_output=True, text=True)
+            if wid_cmd.returncode == 0 and wid_cmd.stdout.strip():
+                wids = wid_cmd.stdout.strip().split('\n')
+                for wid in wids:
+                    geom_cmd = subprocess.run(["xdotool", "getwindowgeometry", wid], capture_output=True, text=True)
+                    output = geom_cmd.stdout
+                    pos_match = re.search(r"Position:\s+(\d+),\s*(\d+)", output)
+                    geom_match = re.search(r"Geometry:\s+(\d+)x(\d+)", output)
+                    if pos_match and geom_match:
+                        w = int(geom_match.group(1))
+                        h = int(geom_match.group(2))
+                        # Ignore hidden/tiny windows. Also skip the 290x548 window if it's not the game display 
+                        # Wait, DeSmuME window might be 262x482 (game) or 290x548 (main window). We want the main window or game window?
+                        # Actually 256x384 is the native res. 262x482 is probably the internal game panel, and 290x548 is the outer shell.
+                        # It's better to capture the game panel itself. Let's just pick the largest one that matches.
+                        if w > 100 and h > 100:
+                            self.monitor["left"] = int(pos_match.group(1))
+                            self.monitor["top"] = int(pos_match.group(2))
+                            self.monitor["width"] = w
+                            self.monitor["height"] = h
+                            return
+            else:
+                print(f"DEBUG: xdotool search failed or returned empty. Code: {wid_cmd.returncode}, Error: {wid_cmd.stderr}")
+        except Exception as e:
+            print(f"DEBUG: Exception running xdotool: {e}")
 
     def get_frame(self):
         """Returns the current frame as a numpy array in BGR format."""
+        self.update_monitor_geometry()
         # Grab the data
         sct_img = self.sct.grab(self.monitor)
         # Convert to numpy array

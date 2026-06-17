@@ -23,14 +23,29 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Left Side: Game Display -->
+            <!-- Left Side: Game Display (1/3) -->
             <section class="game-section">
                 <div class="game-container">
                     <!-- The MJPEG stream from the backend -->
                     <img id="game-stream" src="/video_feed" alt="Game Stream">
-                    
-                    <!-- Controller Overlay -->
-                    <div class="controller-overlay">
+                </div>
+            </section>
+
+            <!-- Right Side: AI Reasoning Chat & Controller (2/3) -->
+            <section class="right-section">
+                <!-- Top 3/4: AI Reasoning Chat -->
+                <div class="chat-section">
+                    <div class="chat-header">
+                        <h2>AI Reasoning Log</h2>
+                    </div>
+                    <div class="chat-history" id="chat-history">
+                        <!-- Chat messages will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Bottom 1/4: Controller -->
+                <div class="controller-section">
+                    <div class="controller-container">
                         <div class="dpad">
                             <div class="btn dpad-btn up" id="btn-UP"></div>
                             <div class="btn dpad-btn left" id="btn-LEFT"></div>
@@ -38,27 +53,17 @@
                             <div class="btn dpad-btn down" id="btn-DOWN"></div>
                             <div class="dpad-center"></div>
                         </div>
+                        <div class="menu-buttons">
+                            <div class="btn menu-btn select" id="btn-SELECT"><span>SELECT</span></div>
+                            <div class="btn menu-btn start" id="btn-START"><span>START</span></div>
+                        </div>
                         <div class="action-buttons">
                             <div class="btn action-btn y" id="btn-Y"><span>Y</span></div>
                             <div class="btn action-btn x" id="btn-X"><span>X</span></div>
                             <div class="btn action-btn b" id="btn-B"><span>B</span></div>
                             <div class="btn action-btn a" id="btn-A"><span>A</span></div>
                         </div>
-                        <div class="menu-buttons">
-                            <div class="btn menu-btn select" id="btn-SELECT"><span>SELECT</span></div>
-                            <div class="btn menu-btn start" id="btn-START"><span>START</span></div>
-                        </div>
                     </div>
-                </div>
-            </section>
-
-            <!-- Right Side: AI Reasoning Chat -->
-            <section class="chat-section">
-                <div class="chat-header">
-                    <h2>AI Reasoning Log</h2>
-                </div>
-                <div class="chat-history" id="chat-history">
-                    <!-- Chat messages will be injected here -->
                 </div>
             </section>
         </main>

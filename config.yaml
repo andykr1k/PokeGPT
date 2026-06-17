@@ -4,6 +4,8 @@ app:
 
 emulator:
   capture_fps: 30
+  rom_path: "/home/andykrik/Downloads/PokemonPlatinum.nds"
+  load_save_state: false
   region:
     left: 0
     top: 0
@@ -11,6 +13,17 @@ emulator:
     height: 384
     
 agent:
-  model_name: "Qwen/Qwen3.5-9B"
-  max_tokens: 256
+  model_name: "Qwen/Qwen3.5-4B"
+  max_tokens: 512
   temperature: 0.7
+
+vllm:
+  host: "0.0.0.0"
+  port: 8001
+  tensor_parallel_size: 1
+  max_model_len: 8192
+  # gpu_memory_utilization: 0.6
+  dtype: "auto"
+  trust_remote_code: true
+  reasoning_parser: "qwen3"
+  # enforce_eager: true

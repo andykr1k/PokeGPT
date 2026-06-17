@@ -8,9 +8,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class PokeAgent:
-    def __init__(self, api_key: str, base_url: str, model_name: str):
+    def __init__(self, api_key: str, base_url: str, model_name: str, max_tokens: int = 512, temperature: float = 0.7):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.temperature = temperature
 
         self.system_prompt = (
             "You are an AI trained to play Pokémon Platinum. "
@@ -58,8 +60,8 @@ class PokeAgent:
                         ],
                     }
                 ],
-                max_tokens=256,
-                temperature=0.7,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
                 response_format={"type": "json_object"}
             )
             
@@ -78,5 +80,10 @@ class PokeAgent:
                 return {"reasoning": content, "button": button}
                 
         except Exception as e:
+            error_str = str(e)
+            if "Connection error" in error_str or "connect" in error_str.lower():
+                logger.warning("Waiting for vLLM server to start... (Connection error)")
+                return {"reasoning": "Waiting for LLM to load...", "button": None}
+            
             logger.error(f"LLM Error: {e}")
             return {"reasoning": f"Error calling model: {e}", "button": None}

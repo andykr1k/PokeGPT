@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         msgDiv.innerHTML = `
             <div class="meta">
-                <span>Qwen 3.5 (9B)</span>
+                <span>Qwen 3.5 (4B)</span>
                 <span>${timeString}</span>
             </div>
             <div class="content">${escapeHtml(reasoning)}</div>

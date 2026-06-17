@@ -11,7 +11,7 @@ A full-stack system where an AI (Qwen 3.6 Vision-Language Model) autonomously pl
 2. Run `uv sync` to install dependencies.
 3. Start your local `vLLM` server:
    ```bash
-   vllm serve Qwen/Qwen3.5-9B --port 8001
+   vllm serve Qwen/Qwen3.5-4B --port 8001
    ```
 4. Copy `.env.example` to `.env` and fill in API keys or host URLs.
 5. Launch your DeSmuME emulator with Pokémon Platinum.

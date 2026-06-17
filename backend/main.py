@@ -1,5 +1,12 @@
 import asyncio
 import os
+if 'DISPLAY' not in os.environ:
+    if os.path.exists('/tmp/.X11-unix/X1'):
+        os.environ['DISPLAY'] = ':1'
+    elif os.path.exists('/tmp/.X11-unix/X0'):
+        os.environ['DISPLAY'] = ':0'
+    else:
+        os.environ['DISPLAY'] = ':1'
 import yaml
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse, FileResponse
@@ -19,10 +26,13 @@ with open("config.yaml", "r") as f:
 
 # Initialize controllers
 emulator = EmulatorController(config)
+agent_config = config.get("agent", {})
 agent = PokeAgent(
     api_key=os.getenv("VLLM_API_KEY", "dummy"),
     base_url=os.getenv("VLLM_API_URL", "http://localhost:8001/v1"),
-    model_name=config.get("agent", {}).get("model_name", "Qwen/Qwen-VL-Chat")
+    model_name=agent_config.get("model_name", "Qwen/Qwen3.5-4B"),
+    max_tokens=agent_config.get("max_tokens", 512),
+    temperature=agent_config.get("temperature", 0.7)
 )
 
 # Websocket connection manager

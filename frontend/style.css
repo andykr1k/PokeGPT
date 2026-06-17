@@ -85,7 +85,7 @@ body {
 
 /* Game Section */
 .game-section {
-    flex: 2;
+    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -113,30 +113,34 @@ body {
     border-radius: 4px;
 }
 
-/* Controller Overlay */
-.controller-overlay {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    max-width: 600px;
-    height: 120px;
-    background: rgba(31, 40, 51, 0.85);
-    backdrop-filter: blur(10px);
-    border-radius: 60px;
+/* Right Section */
+.right-section {
+    flex: 2;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 30px;
-    border: 1px solid rgba(102, 252, 241, 0.2);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    opacity: 0.9;
-    transition: var(--transition);
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.controller-overlay:hover {
-    opacity: 1;
+/* Controller Section */
+.controller-section {
+    flex: 1;
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.controller-container {
+    width: 100%;
+    height: 100%;
+    max-width: 600px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 20px;
 }
 
 .btn {
@@ -206,8 +210,7 @@ body {
 .menu-buttons {
     display: flex;
     gap: 15px;
-    align-self: flex-end;
-    margin-bottom: 20px;
+    align-self: center;
 }
 
 .menu-btn {
@@ -230,13 +233,14 @@ body {
 
 /* Chat Section */
 .chat-section {
-    flex: 1;
+    flex: 3;
     background-color: var(--surface-color);
     border-radius: var(--border-radius);
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(255,255,255,0.05);
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    overflow: hidden;
 }
 
 .chat-header {
