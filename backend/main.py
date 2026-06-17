@@ -32,7 +32,8 @@ agent = PokeAgent(
     base_url=os.getenv("VLLM_API_URL", "http://localhost:8001/v1"),
     model_name=agent_config.get("model_name", "Qwen/Qwen3.5-4B"),
     max_tokens=agent_config.get("max_tokens", 512),
-    temperature=agent_config.get("temperature", 0.7)
+    temperature=agent_config.get("temperature", 0.7),
+    debug=agent_config.get("debug", False)
 )
 
 # Websocket connection manager
@@ -100,16 +101,20 @@ async def ai_loop():
         frame = emulator.get_frame()
         result = await agent.get_action(frame)
         
-        reasoning = result.get("reasoning")
-        button = result.get("button")
-        
-        if button:
-            emulator.press_button(button)
+        if result:
+            reasoning = result.get("reasoning")
+            button = result.get("button")
             
-        await manager.broadcast({
-            "reasoning": reasoning,
-            "button": button
-        })
+            # Print a message when the model responds
+            print(f"\nModel Responded - Action: {button} | Reasoning: {reasoning}")
+            
+            if button:
+                emulator.press_button(button)
+                
+            await manager.broadcast({
+                "reasoning": reasoning,
+                "button": button
+            })
         
         # Wait a bit before next action to not overload
         await asyncio.sleep(2.0)

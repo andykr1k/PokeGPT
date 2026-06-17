@@ -7,9 +7,6 @@ import threading
 import subprocess
 import re
 
-# We create a dummy emulator interface for now.
-# Real usage: locate the DeSmuME window, grab its screen area, and send key presses.
-
 BUTTON_MAPPING = {
     "A": "x",
     "B": "z",
@@ -38,7 +35,6 @@ class EmulatorController:
 
     def update_monitor_geometry(self):
         now = time.time()
-        # Only update once every 2 seconds to avoid CPU overhead
         if now - self.last_monitor_update < 2.0:
             return
 
@@ -55,15 +51,22 @@ class EmulatorController:
                     if pos_match and geom_match:
                         w = int(geom_match.group(1))
                         h = int(geom_match.group(2))
-                        # Ignore hidden/tiny windows. Also skip the 290x548 window if it's not the game display 
-                        # Wait, DeSmuME window might be 262x482 (game) or 290x548 (main window). We want the main window or game window?
-                        # Actually 256x384 is the native res. 262x482 is probably the internal game panel, and 290x548 is the outer shell.
-                        # It's better to capture the game panel itself. Let's just pick the largest one that matches.
                         if w > 100 and h > 100:
-                            self.monitor["left"] = int(pos_match.group(1))
-                            self.monitor["top"] = int(pos_match.group(2))
-                            self.monitor["width"] = w
-                            self.monitor["height"] = h
+                            left_ext, right_ext, top_ext, bottom_ext = 0, 0, 0, 0
+                            
+                            xprop_cmd = subprocess.run(["xprop", "-id", wid, "_NET_FRAME_EXTENTS"], capture_output=True, text=True)
+                            if xprop_cmd.returncode == 0 and "_NET_FRAME_EXTENTS" in xprop_cmd.stdout:
+                                match_ext = re.search(r"=\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)", xprop_cmd.stdout)
+                                if match_ext:
+                                    left_ext = int(match_ext.group(1))
+                                    right_ext = int(match_ext.group(2))
+                                    top_ext = int(match_ext.group(3))
+                                    bottom_ext = int(match_ext.group(4))
+                            
+                            self.monitor["left"] = int(pos_match.group(1)) + left_ext
+                            self.monitor["top"] = int(pos_match.group(2)) + top_ext
+                            self.monitor["width"] = w - left_ext - right_ext
+                            self.monitor["height"] = h - top_ext - bottom_ext
                             return
             else:
                 print(f"DEBUG: xdotool search failed or returned empty. Code: {wid_cmd.returncode}, Error: {wid_cmd.stderr}")
@@ -89,16 +92,45 @@ class EmulatorController:
             return b""
         return jpeg.tobytes()
 
-    def press_button(self, button: str, duration=0.1):
+    def press_button(self, button: str, duration=0.2):
         """Presses a virtual button on the emulator."""
-        key = BUTTON_MAPPING.get(button.upper())
-        if not key:
+        # Map to keysyms compatible with xdotool (native keysyms)
+        BUTTON_MAPPING_XDO = {
+            "A": "x",
+            "B": "z",
+            "X": "s",
+            "Y": "a",
+            "UP": "Up",
+            "DOWN": "Down",
+            "LEFT": "Left",
+            "RIGHT": "Right",
+            "START": "Return",
+            "SELECT": "Shift_R"
+        }
+        
+        button_upper = button.upper()
+        key_xdo = BUTTON_MAPPING_XDO.get(button_upper)
+        key_pag = BUTTON_MAPPING.get(button_upper)
+        
+        if not key_pag:
             return
 
         with self.lock:
             try:
-                pyautogui.keyDown(key)
+                # 1. Bring DeSmuME window to the foreground
+                subprocess.run(["xdotool", "search", "--name", "DeSmuME", "windowactivate", "--sync"], capture_output=True)
+                time.sleep(0.1) # short pause to ensure window is focused
+                
+                # 2. Primary: Use xdotool to natively press the key with duration delay
+                if key_xdo:
+                    # --delay 200 holds the key down for 200ms
+                    res = subprocess.run(["xdotool", "key", "--delay", "200", key_xdo], capture_output=True)
+                    if res.returncode == 0:
+                        return
+                
+                # 3. Fallback: Use pyautogui if xdotool failed
+                pyautogui.keyDown(key_pag)
                 time.sleep(duration)
-                pyautogui.keyUp(key)
+                pyautogui.keyUp(key_pag)
             except Exception as e:
-                print(f"Error pressing {key}: {e}")
+                print(f"Error pressing {button}: {e}")

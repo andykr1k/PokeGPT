@@ -4,40 +4,45 @@ import json
 import re
 from openai import AsyncOpenAI
 import logging
+from pydantic import BaseModel
+from typing import Optional, Literal
 
 logger = logging.getLogger(__name__)
 
+class ActionResponse(BaseModel):
+    reasoning: str
+    button: Optional[Literal["A", "B", "X", "Y", "UP", "DOWN", "LEFT", "RIGHT", "START", "SELECT"]] = None
+
 class PokeAgent:
-    def __init__(self, api_key: str, base_url: str, model_name: str, max_tokens: int = 512, temperature: float = 0.7):
+    def __init__(self, api_key: str, base_url: str, model_name: str, max_tokens: int = 512, temperature: float = 0.7, debug: bool = False):
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.debug = debug
 
         self.system_prompt = (
-            "You are an AI trained to play Pokémon Platinum. "
-            "You will be given the current frame of the Nintendo DS emulator. "
-            "The top screen is the main game view, the bottom screen is the touch screen. "
-            "First, reason about what is happening in the game and what you need to do next. "
-            "Then, decide which button to press. "
+            "You are playing Pokémon Platinum. "
+            "You will be given the current frame of the game. "
+            "Reason about the state and select the next button to press to play and complete the game. "
             "Valid buttons: A, B, X, Y, UP, DOWN, LEFT, RIGHT, START, SELECT. "
-            "Respond strictly in this JSON format: "
-            '{"reasoning": "your reasoning here", "button": "BUTTON_NAME"}'
+            "Keep reasoning short. Only set button to null/None if the game is loading, transitioning, or no action is needed."
         )
 
     def encode_image(self, frame_bgr):
-        # Convert BGR to RGB
-        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        ret, buffer = cv2.imencode('.jpg', frame_rgb)
+        # cv2.imencode expects BGR natively, passing frame_rgb previously caused a Red/Blue color swap
+        ret, buffer = cv2.imencode('.jpg', frame_bgr)
         if not ret:
             return ""
         return base64.b64encode(buffer).decode('utf-8')
 
-    async def get_action(self, frame) -> dict:
+    async def get_action(self, frame) -> Optional[dict]:
         """Sends the frame to Qwen 3.6 Vision model and returns reasoning and button."""
         base64_image = self.encode_image(frame)
         if not base64_image:
-            return {"reasoning": "Failed to capture image.", "button": None}
+            if self.debug:
+                logger.error("Failed to capture image.")
+            return None
 
         try:
             response = await self.client.chat.completions.create(
@@ -50,7 +55,7 @@ class PokeAgent:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": "What should we do next?"},
+                            {"type": "text", "text": "Analyze the screen state. State your reasoning, then select the next button to press to play the game."},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -62,28 +67,52 @@ class PokeAgent:
                 ],
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                response_format={"type": "json_object"}
+                extra_body={
+                    "structured_outputs": {
+                        "json": ActionResponse.model_json_schema()
+                    }
+                }
             )
             
-            content = response.choices[0].message.content
+            message = response.choices[0].message
+            if self.debug:
+                print(f"DEBUG: Message from model: {message}")
+            content = message.content
+            reasoning_content = getattr(message, "reasoning_content", None)
+            
+            if not content:
+                if self.debug:
+                    logger.warning(f"Model returned empty content. Reasoning trace: {reasoning_content}")
+                return None
+
             # Parse JSON
             try:
                 data = json.loads(content)
+                reasoning = data.get("reasoning", "No reasoning provided.")
+                if reasoning_content:
+                    reasoning = f"[Thought]: {reasoning_content}\n\n[Action]: {reasoning}"
                 return {
-                    "reasoning": data.get("reasoning", "No reasoning provided."),
+                    "reasoning": reasoning,
                     "button": data.get("button", None)
                 }
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, TypeError) as e:
+                if self.debug:
+                    logger.error(f"Failed to parse JSON content: {content}. Error: {e}")
                 # Fallback parser if not strictly JSON
                 match = re.search(r'"button"\s*:\s*"([A-Z_]+)"', content)
                 button = match.group(1) if match else None
-                return {"reasoning": content, "button": button}
+                reasoning = content
+                if reasoning_content:
+                    reasoning = f"[Thought]: {reasoning_content}\n\n[Action]: {reasoning}"
+                return {"reasoning": reasoning, "button": button}
                 
         except Exception as e:
             error_str = str(e)
             if "Connection error" in error_str or "connect" in error_str.lower():
-                logger.warning("Waiting for vLLM server to start... (Connection error)")
-                return {"reasoning": "Waiting for LLM to load...", "button": None}
+                if self.debug:
+                    logger.warning("vLLM connection error - waiting for server to start...")
+                return None
             
-            logger.error(f"LLM Error: {e}")
-            return {"reasoning": f"Error calling model: {e}", "button": None}
+            if self.debug:
+                logger.error(f"LLM Error: {e}")
+            return None

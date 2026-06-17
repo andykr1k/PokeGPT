@@ -17,6 +17,25 @@ if 'DISPLAY' not in os.environ:
         os.environ['DISPLAY'] = ':1'
 
 import pyautogui
+import re
+
+def configure_desmume_ui():
+    cfg_path = os.path.expanduser("~/.var/app/org.desmume.DeSmuME/config/desmume/config.cfg")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, "r") as f:
+                content = f.read()
+            
+            # Replace show options if they exist
+            content = re.sub(r"ShowMenu=.*", "ShowMenu=false", content)
+            content = re.sub(r"ShowToolbar=.*", "ShowToolbar=false", content)
+            content = re.sub(r"ShowStatusbar=.*", "ShowStatusbar=false", content)
+            
+            with open(cfg_path, "w") as f:
+                f.write(content)
+            print("Configured DeSmuME UI to hide menu, toolbar, and status bar.")
+        except Exception as e:
+            print(f"Could not configure DeSmuME UI: {e}")
 
 def main():
     print("Loading config.yaml...")
@@ -58,18 +77,22 @@ def main():
         "--gpu-memory-utilization", v_gpu,
         "--dtype", v_dtype
     ]
-    if vllm_config.get('trust_remote_code', True):
-        vllm_cmd.append("--trust-remote-code")
+    
+    enable_thinking = vllm_config.get('enable_thinking', True)
+    if enable_thinking:
+        reasoning_parser = vllm_config.get('reasoning_parser')
+        if reasoning_parser:
+            vllm_cmd.extend(["--reasoning-parser", reasoning_parser])
+    else:
+        vllm_cmd.extend(["--default-chat-template-kwargs", '{"enable_thinking": false}'])
+        
     if vllm_config.get('enforce_eager', True):
         vllm_cmd.append("--enforce-eager")
-    
-    reasoning_parser = vllm_config.get('reasoning_parser')
-    if reasoning_parser:
-        vllm_cmd.extend(["--reasoning-parser", reasoning_parser])
 
-    # Set VLLM_API_URL so the backend knows where to find it
+    # Set environment variables for vLLM and Hugging Face
     env = os.environ.copy()
     env["VLLM_API_URL"] = f"http://localhost:{v_port}/v1"
+    env["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
     
     vllm_proc = subprocess.Popen(vllm_cmd, env=env)
     processes.append(("vLLM Server", vllm_proc))
@@ -85,6 +108,7 @@ def main():
     processes.append(("Backend", backend_proc))
 
     print(f"\n[3] Starting DeSmuME emulator (load_save_state={load_save_state})...")
+    configure_desmume_ui()
     rom_dir = os.path.dirname(os.path.abspath(rom_path))
     emu_cmd = [
         "flatpak", "run", 
