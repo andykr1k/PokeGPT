@@ -98,9 +98,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # Background task for AI agent
 async def ai_loop():
+    action_history = []
     while True:
         frame = emulator.get_frame()
-        result = await agent.get_action(frame)
+        result = await agent.get_action(frame, action_history)
         
         if result:
             reasoning = result.get("reasoning")
@@ -108,6 +109,10 @@ async def ai_loop():
             
             # Print a message when the model responds
             print(f"\nModel Responded - Action: {button} | Reasoning: {reasoning}")
+            
+            action_history.append(button)
+            if len(action_history) > 5:
+                action_history.pop(0)
             
             if button:
                 emulator.press_button(button)

@@ -41,7 +41,7 @@ class PokeAgent:
             return ""
         return base64.b64encode(buffer).decode('utf-8')
 
-    async def get_action(self, frame) -> Optional[dict]:
+    async def get_action(self, frame, action_history: Optional[list] = None) -> Optional[dict]:
         """Sends the frame to Qwen 3.6 Vision model and returns reasoning and button."""
         base64_image = self.encode_image(frame)
         if not base64_image:
@@ -49,13 +49,19 @@ class PokeAgent:
                 logger.error("Failed to capture image.")
             return None
 
+        # Dynamically append history to system prompt
+        prompt = self.system_prompt
+        if action_history:
+            prompt += f"\n\nRECENT ACTION HISTORY:\n{', '.join([str(a) for a in action_history[-5:]])}"
+            prompt += "\nGUIDANCE: If you see you have repeated the same action multiple times and the screen has not changed, DO NOT repeat it again. Try a different button, or return null to wait."
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": self.system_prompt
+                        "content": prompt
                     },
                     {
                         "role": "user",

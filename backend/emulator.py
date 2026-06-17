@@ -92,7 +92,7 @@ class EmulatorController:
             return b""
         return jpeg.tobytes()
 
-    def press_button(self, button: str, duration=0.2):
+    def press_button(self, button: str, duration=0.1):
         """Presses a virtual button on the emulator."""
         # Map to keysyms compatible with xdotool (native keysyms)
         BUTTON_MAPPING_XDO = {
@@ -124,7 +124,7 @@ class EmulatorController:
                 # 2. Primary: Use xdotool to natively press the key with duration delay
                 if key_xdo:
                     # --delay 200 holds the key down for 200ms
-                    res = subprocess.run(["xdotool", "key", "--delay", "200", key_xdo], capture_output=True)
+                    res = subprocess.run(["xdotool", "key", "--delay", "100", key_xdo], capture_output=True)
                     if res.returncode == 0:
                         return
                 
