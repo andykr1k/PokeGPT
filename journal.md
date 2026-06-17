@@ -1,6 +1,8 @@
 # PokeGPT Development Journal
 
-## Model: Qwen/Qwen3.5-4B
+
+## Observation 1
+* **Model:** Qwen/Qwen3.5-4B
 * **Date:** 2026-06-17
 * **Config Used:** `temperature: 0.0`, `max_tokens: 1024`, `max_model_len: 8192`, `thinking: false`
 * **Observation:** The model struggles to get past the initial start sequence. Instead of actually reasoning through the dialogue on the screen, it blindly presses 'A' over and over whenever it sees a text box.
