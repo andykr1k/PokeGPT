@@ -24,9 +24,14 @@ class PokeAgent:
         self.system_prompt = (
             "You are playing Pokémon Platinum. "
             "You will be given the current frame of the game. "
-            "Reason about the state and select the next button to press to play and complete the game. "
+            "CRITICAL INSTRUCTION: You MUST first read and transcribe any text you see on the screen in your reasoning. "
+            "Reason about the state based on the text and visual elements, and select the next button to press to play and complete the game. "
             "Valid buttons: A, B, X, Y, UP, DOWN, LEFT, RIGHT, START, SELECT. "
-            "Keep reasoning short. Only set button to null/None if the game is loading, transitioning, or no action is needed."
+            "HINTS:\n"
+            "- If you see the game logo or 'Press START', you must press START to enter the main menu.\n"
+            "- If you are in a dialogue, read the text first, then press A to advance it.\n"
+            "- Do not blindly press A without knowing what the dialogue says.\n"
+            "Keep reasoning short but always include the transcribed text. Only set button to null/None if the game is loading, transitioning, or no action is needed."
         )
 
     def encode_image(self, frame_bgr):
